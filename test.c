@@ -1,71 +1,43 @@
 #include "tavltree.h"
 #include <stdio.h>
-#include <stdlib.h>
 
 struct IntNode
 {
     int n;
     TAVLTREE_DATAFIELD(IntNode);
 };
-
-int IntNodeCmp(struct IntNode* a, struct IntNode* b)
-{
-    return a->n - b->n;
-}
-
-void IntNodeCpy(struct IntNode* dst, const struct IntNode* src)
-{
-    dst->n = src->n;
-}
-
-TAVLTREE_GENERATE(IntNode, IntNodeCmp, IntNodeCpy);
-
-
-void Dump(const struct IntNode* node)
-{
-    printf("%d ", node->n);
-}
-
-struct IntNode* CreateIntNode(int n)
-{
-    struct IntNode* node = (struct IntNode*)malloc(sizeof(struct IntNode));
-    printf("malloc:%p\n", (int*)node);
-    node->n = n;
-    return node;
-}
-
-void DestroyIntNode(struct IntNode* node)
-{
-    printf("free:%p\n", (int*)node);
-    if (NULL != node)
-        free(node);
-}
+TAVLTREE_DECLARE(IntNode);
 
 int main(int argc, char** argv)
 {
+    struct IntNode cache[16];
+    const int N = (int)(sizeof(cache) / sizeof(cache[0]));
     struct IntNode* root = NULL;
-    struct IntNode* rm;
-    struct IntNode tmp;
+    struct IntNode* tmp;
     int i;
+    struct IntNode x;
 
-    for (i = 0; i < 10; ++i)
+    for (i = 0; i < N; ++i)
     {
-        TAVLTREE_INSERT(IntNode, &root, CreateIntNode(i));
-
-        TAVLTREE_TRAVEL(IntNode, root, Dump);
+        cache[i].n = i;
+        TAVLTREE_INSERT(IntNode, &root, &cache[i]);
+        TAVLTREE_FOREACH(IntNode, root, tmp)
+            printf("%d ", tmp->n);
         printf("\n");
     }
-
-    for (i = 0; i < 10; ++i)
+    for (i = 0; i < N; ++i)
     {
-        tmp.n = i;
-        TAVLTREE_REMOVE(IntNode, &root, &tmp, &rm);
-        DestroyIntNode(rm);
-
-        TAVLTREE_TRAVEL(IntNode, root, Dump);
+        x.n = i;
+        tmp = TAVLTREE_REMOVE(IntNode, &root, &x);
+        if (&cache[i] != tmp) // <--------------It will NOT occur!!!
+            printf("memory mismatch when remove %d[%p, %p]\n", i, (int*)&cache[i], (int*)tmp);
+        TAVLTREE_FOREACH(IntNode, root, tmp)
+            printf("%d ", tmp->n);
         printf("\n");
     }
-
     return 0;
 }
+
+int IntNodeCompare(struct IntNode* a, struct IntNode* b) { return a->n - b->n; }
+TAVLTREE_DEFINE(IntNode, IntNodeCompare);
 
